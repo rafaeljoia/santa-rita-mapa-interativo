@@ -8,10 +8,12 @@ import Home from "./pages/Home";
 
 
 function Router() {
+  const basePath = import.meta.env.DEV ? '' : '/santa-rita-mapa-interativo';
+  
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/404"} component={NotFound} />
+      <Route path={basePath + "/ "} component={Home} />
+      <Route path={basePath + "/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>
