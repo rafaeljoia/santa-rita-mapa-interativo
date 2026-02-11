@@ -153,6 +153,7 @@ function vitePluginManusDebugCollector(): Plugin {
 const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
 
 export default defineConfig({
+  base: process.env.NODE_ENV === 'production' ? '/santa-rita-mapa-interativo/' : '/',
   plugins,
   resolve: {
     alias: {
