@@ -86,16 +86,31 @@ declare global {
   }
 }
 
-const API_KEY = import.meta.env.VITE_FRONTEND_FORGE_API_KEY;
+// Use Manus proxy if available, otherwise use direct Google Maps API
+const API_KEY = import.meta.env.VITE_FRONTEND_FORGE_API_KEY || "AIzaSyDummy";
 const FORGE_BASE_URL =
   import.meta.env.VITE_FRONTEND_FORGE_API_URL ||
   "https://forge.butterfly-effect.dev";
-const MAPS_PROXY_URL = `${FORGE_BASE_URL}/v1/maps/proxy`;
+
+// Check if we're in a Manus environment with proxy support
+const isManusEnvironment = !!import.meta.env.VITE_FRONTEND_FORGE_API_KEY;
+const MAPS_PROXY_URL = isManusEnvironment 
+  ? `${FORGE_BASE_URL}/v1/maps/proxy`
+  : "https://maps.googleapis.com";
 
 function loadMapScript() {
   return new Promise(resolve => {
     const script = document.createElement("script");
-    script.src = `${MAPS_PROXY_URL}/maps/api/js?key=${API_KEY}&v=weekly&libraries=marker,places,geocoding,geometry`;
+    
+    if (isManusEnvironment) {
+      // Use Manus proxy
+      script.src = `${MAPS_PROXY_URL}/maps/api/js?key=${API_KEY}&v=weekly&libraries=marker,places,geocoding,geometry`;
+    } else {
+      // Use direct Google Maps API - works on GitHub Pages
+      // Note: This requires a valid API key for production use
+      script.src = `https://maps.googleapis.com/maps/api/js?v=weekly&libraries=marker,places,geocoding,geometry`;
+    }
+    
     script.async = true;
     script.crossOrigin = "anonymous";
     script.onload = () => {
