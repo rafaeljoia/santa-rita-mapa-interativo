@@ -93,33 +93,57 @@ const FORGE_BASE_URL =
   import.meta.env.VITE_FRONTEND_FORGE_API_URL ||
   "https://forge.butterfly-effect.dev";
 
-// Check if we're in a Manus environment with proxy support
-const isManusEnvironment = !!MANUS_API_KEY;
-const MAPS_PROXY_URL = isManusEnvironment 
-  ? `${FORGE_BASE_URL}/v1/maps/proxy`
-  : "https://maps.googleapis.com"
+// Detect if we're in a Manus environment based on hostname
+function isManusEnvironment(): boolean {
+  if (typeof window === "undefined") return false;
+  const host = window.location.hostname;
+  return host.includes("manus.computer") || host.includes("manuspre.computer");
+}
 
-function loadMapScript() {
-  return new Promise(resolve => {
+function loadMapScript(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // Check if already loaded
+    if (window.google?.maps) {
+      resolve();
+      return;
+    }
+
     const script = document.createElement("script");
+    let timeoutId: NodeJS.Timeout;
     
-    if (isManusEnvironment) {
-      // Use Manus proxy
-      script.src = `${MAPS_PROXY_URL}/maps/api/js?key=${MANUS_API_KEY}&v=weekly&libraries=marker,places,geocoding,geometry`;
+    if (isManusEnvironment()) {
+      // Use Manus proxy only on Manus domains
+      const proxyUrl = `${FORGE_BASE_URL}/v1/maps/proxy`;
+      script.src = `${proxyUrl}/maps/api/js?key=${MANUS_API_KEY}&v=weekly&libraries=marker,places,geocoding,geometry`;
     } else {
-      // Use direct Google Maps API with provided API key
+      // Use direct Google Maps API for GitHub Pages and other deployments
       script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&v=weekly&libraries=marker,places,geocoding,geometry`;
     }
     
     script.async = true;
+    script.defer = true;
     script.crossOrigin = "anonymous";
+    
     script.onload = () => {
-      resolve(null);
-      script.remove(); // Clean up immediately
+      clearTimeout(timeoutId);
+      // Verify Google Maps loaded
+      if (window.google?.maps) {
+        resolve();
+      } else {
+        reject(new Error("Google Maps loaded but window.google.maps is undefined"));
+      }
     };
+    
     script.onerror = () => {
-      console.error("Failed to load Google Maps script");
+      clearTimeout(timeoutId);
+      reject(new Error(`Failed to load Google Maps from: ${script.src}`));
     };
+    
+    // Timeout after 10 seconds
+    timeoutId = setTimeout(() => {
+      reject(new Error("Google Maps script loading timeout"));
+    }, 10000);
+    
     document.head.appendChild(script);
   });
 }
